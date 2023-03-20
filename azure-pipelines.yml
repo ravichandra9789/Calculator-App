@@ -22,59 +22,59 @@ steps:
     testResultsFiles: '**/TEST-*.xml'
     tasks: 'assembleDebug'
 
-  - bash: |
-      echo "##vso[task.setvariable variable=versionName]$(Build.BuildNumber)"
-      echo "##vso[task.setvariable variable=versionCode]$((1000000 * $(major) + 1000 * $(minor) + 1000 * $(patch) + $(build)))"
-      find . -type f -name "*.release.config" -print0 | xargs -0 -n 1 sh -c '
-          transform="$0";
-          target=$(echo "$transform" | sed "s/\(.*\)\.release\.config/\1.config/g");
-          if [[ -f "$transform" && -f "$target" ]]; then 
-              echo "Transforming: $transform => $target";
-              xsltproc -o $target $transform $target;
-          fi
-      '
-      find . -type f -name "*version.json" -print0 | xargs -0 -n 1 sh -c '
-          transform=$0
-          echo "Transforming JSON configuration: $transform";
-          mv "$transform" "$transform".bak
-          sed "s|%1\$s|$(major)|g;s|%2\$s|$(minor)|g;s|%3\$s|$(patch)|g;s|%4\$s|$(build)|g;s|%5\$s|$(feature)|g;" "$transform".bak >> "$transform"
-      '
-    displayName: Transform Configurations
+- bash: |
+    echo "##vso[task.setvariable variable=versionName]$(Build.BuildNumber)"
+    echo "##vso[task.setvariable variable=versionCode]$((1000000 * $(major) + 1000 * $(minor) + 1000 * $(patch) + $(build)))"
+    find . -type f -name "*.release.config" -print0 | xargs -0 -n 1 sh -c '
+        transform="$0";
+        target=$(echo "$transform" | sed "s/\(.*\)\.release\.config/\1.config/g");
+        if [[ -f "$transform" && -f "$target" ]]; then 
+            echo "Transforming: $transform => $target";
+            xsltproc -o $target $transform $target;
+        fi
+    '
+    find . -type f -name "*version.json" -print0 | xargs -0 -n 1 sh -c '
+        transform=$0
+        echo "Transforming JSON configuration: $transform";
+        mv "$transform" "$transform".bak
+        sed "s|%1\$s|$(major)|g;s|%2\$s|$(minor)|g;s|%3\$s|$(patch)|g;s|%4\$s|$(build)|g;s|%5\$s|$(feature)|g;" "$transform".bak >> "$transform"
+    '
+  displayName: Transform Configurations
 
-  - task: Gradle@2
-    displayName: Build Project
-    inputs:
-      tasks: :$(packageName):assembleRelease
-      javaHomeOption: 'JDKVersion'    
-      jdkVersionOption: '1.11' 
-      testRunTitle: Build Project
+- task: Gradle@2
+  displayName: Build Project
+  inputs:
+    tasks: :$(packageName):assembleRelease
+    javaHomeOption: 'JDKVersion'    
+    jdkVersionOption: '1.11' 
+    testRunTitle: Build Project
 
-  - task: Gradle@2
-    displayName: Generate JavaDocs
-    inputs:
-      tasks: docs
-      javaHomeOption: 'JDKVersion'    
-      jdkVersionOption: '1.11' 
-      testRunTitle: Generate JavaDocs
+- task: Gradle@2
+  displayName: Generate JavaDocs
+  inputs:
+    tasks: docs
+    javaHomeOption: 'JDKVersion'    
+    jdkVersionOption: '1.11' 
+    testRunTitle: Generate JavaDocs
 
-  - task: Gradle@2
-    displayName: Clean Project
-    inputs:
-      tasks: clean
-      javaHomeOption: 'JDKVersion'    
-      jdkVersionOption: '1.11' 
-      testRunTitle: Clean Project
+- task: Gradle@2
+  displayName: Clean Project
+  inputs:
+    tasks: clean
+    javaHomeOption: 'JDKVersion'    
+    jdkVersionOption: '1.11' 
+    testRunTitle: Clean Project
 
-  - script: |
-      cd $(Build.SourcesDirectory)
-      tar cvf $(Build.ArtifactStagingDirectory)/$(Build.BuildNumber).tar  --exclude .git --exclude .gradle --exclude .idea *
-    displayName: Archive Artifact
+- script: |
+    cd $(Build.SourcesDirectory)
+    tar cvf $(Build.ArtifactStagingDirectory)/$(Build.BuildNumber).tar  --exclude .git --exclude .gradle --exclude .idea *
+  displayName: Archive Artifact
 
-  - publish: $(Build.ArtifactStagingDirectory)
-    displayName: Publish Artifacts
-    artifact: drop
+- publish: $(Build.ArtifactStagingDirectory)
+  displayName: Publish Artifacts
+  artifact: drop
 
-  - script: |
-      git tag $(Build.BuildNumber)
-      git push origin $(Build.BuildNumber)
-    displayName: Tag commit with artifact ID and set semantic versioning
+- script: |
+    git tag $(Build.BuildNumber)
+    git push origin $(Build.BuildNumber)
+  displayName: Tag commit with artifact ID and set semantic versioning
